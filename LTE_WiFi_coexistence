@@ -1,0 +1,241 @@
+function[p_group,out,out_sum]=LTE_WiFi_coexistence(n_set,W,q,runt,theta_set,K,aa_set,x0_single)
+
+        %n_set(1)=1: number of LTE eNBs
+        %n_set(2): number of WiFi nodes(including the AP)
+        
+        %W(1): inital bakcoff window size of the LTE eNB
+        %from W(2) to W(n_set(2)+1)： inital bakcoff window size of
+        %each WiFi node
+        
+        %q=0.5: binary exponential backoff
+        %runt: simulation time
+        
+        %theta_set(1): aggregate input rate of LTE
+        %theta_set(2): aggregate input rate of WiFi
+        
+        %K(1): cutoff phase of the LTE eNB
+        %from K(2) to K(n_set(2)+1)： cutoff phase of each WiFi node
+        
+        %aa_set(1): succesful transmission time of LTE
+        %aa_set(2): succesful transmission time of WiFi
+        %x0_single: collision time
+        
+        %p_group(1): steady-state probability of successful transmission of HOL packets given that the channel is idle for the LTE eNB  
+        %p_group(2): steady-state probability of successful transmission of HOL packets given that the channel is idle for the WiFi nodes
+
+        %out(1):throughput of LTE
+        %out(2):throughput of WiFi
+        %out_sum: total throughput of the whole network
+        
+
+g=length(n_set);
+n=sum(n_set);
+
+for i=1:g
+    n_pre(i+1)=sum(n_set(1:i));
+end
+
+n_pre(1)=0;
+
+%n_pre
+
+for i=1:n
+    for j=1:g
+        if i>n_pre(j) && i<=n_pre(j+1)
+            aa(i)=aa_set(j);
+            x0(i)=x0_single;
+            %W(i)=W_set(j);
+            lambdar(i)=theta_set(j)/n_set(j); 
+        end
+    end
+end
+
+%aa
+
+rts=x0;
+
+%seq=1;
+
+ql=zeros(n,1);
+hols=zeros(n,1);
+cons=zeros(n,1);
+
+ns=zeros(n,1);
+nre=zeros(n,1);
+nne=zeros(n,1);
+
+ToH=zeros(n,1);
+frH=zeros(n,1);
+
+inp=zeros(n,1);
+outp=zeros(n,1);
+
+acdelay=0;
+
+%for second moment of access delay
+acdelay_sec=0;
+
+G=0;
+mql=zeros(n,1);
+%p=zeros(n,1);
+%rou=zeros(n,1);
+
+wins=zeros(n,1);
+firh=zeros(n,1);
+
+flagc=zeros(n,1);
+flag_ch=0;
+xn=0;
+idt=0;
+
+
+for rt=1:runt
+    
+    % generate new packets
+    for I=1:n
+        x=rand;
+        if x<lambdar(I)/aa(I)
+            inp(I)=inp(I)+1;
+            
+            %note that 
+            %inp(I)=inp(I)+100; 
+            ql(I)=ql(I)+aa(I);
+        end
+        mql(I)=mql(I)+ql(I);
+    end
+    
+
+    % set the transmission requests
+    cons=zeros(n,1);
+    for I=1:n
+        if ql(I)~=0
+            %set the time tag for the fresh HOL packet of each queue
+            if frH(I)==0
+                ToH(I)=rt;
+                frH(I)=1;
+            end
+            
+           
+            % check the queue status and sense the channel
+            if flag_ch==0           % channel is idle
+                if firh(I)==0
+                    mwins=W(I)-1;
+                    wins(I)=floor(rand*mwins);
+                    firh(I)=1;
+                else
+                    if wins(I)==0
+                        cons(I)=1;
+                        nre(I)=nre(I)+1;
+                    else
+                        wins(I)=wins(I)-1;
+                    end
+                end
+            end
+            nne(I)=nne(I)+1;
+        end
+    end
+
+    % calculate the attempt rate
+    if flag_ch==0
+        G=G+sum(cons);
+        idt=idt+1;
+    end
+    
+    % set the channel status
+    if flag_ch==1  % channel is busy
+        if xn==sx
+            flag_ch=0;            
+            xn=0;
+            if sum(flagc)==1
+                [a b]=max(flagc);
+                outqn=b;
+                
+                %calculate the output
+                outp(outqn)=outp(outqn)+1;
+           
+                %calculate the access delay
+                acdelay=acdelay+rt-ToH(outqn);
+                
+                acdelay_sec=acdelay_sec+(rt-ToH(outqn))^2;
+                
+                frH(outqn)=0;
+                
+                firh(outqn)=0;
+                hols(outqn)=0;
+                ns(outqn)=ns(outqn)+1;
+                ql(outqn)=ql(outqn)-aa(outqn);
+            else
+                for I=1:n
+                    if flagc(I)==1
+                        hols(I)=hols(I)+1;
+                        mwins=ceil(W(I)*(1/q)^(min(hols(I),K(I))))-1;
+                        %mwins=ceil(W/q*(min(hols(I),K))^2)-1;
+                        wins(I)=floor(rand*mwins);
+                    end
+                end
+            end
+        else
+            xn=xn+1;
+        end
+    else
+        if sum(cons)~=0
+            flagc=cons;
+            xn=1;
+            flag_ch=1;
+            if sum(cons)==1
+                [a b]=max(cons);
+                sx=aa(b);
+                %sx=aa;
+            else
+                sx=0;
+                for I= 1:n
+                    if cons(I) == 1 && rts(I)>sx
+                        sx=rts(I);
+                    end
+                end
+                %sx=aa;
+            end
+            
+        end
+    end
+    
+           
+%     if mod(rt,10000)==0
+%         TT(Index)=rt*9*10^(-6);
+%         p_node1_sim(Index)=ns(1)/nre(1);
+%         p_node2_sim(Index)=ns(1+n_set(1))/nre(1+n_set(1));
+%         Index=Index+1;
+%     end
+
+     
+end
+
+
+%acdelay=acdelay/(outp*aa)
+%acdelay=acdelay/outp
+%acdelay_sec=acdelay_sec/outp
+
+
+for I=1:g
+    %p(I)=sum(ns((n_pre(I)+1):n_pre(I+1)))/sum(nre((n_pre(I)+1):n_pre(I+1)));
+    out(I)=sum(outp((n_pre(I)+1):n_pre(I+1)))*aa_set(I)/rt;
+    %out_ind(I)=out(I)/n_set(I);
+    %cap(I)=out(I)*r_set(I);
+    %cap(I)=out(I)*PL/aa_set(I);
+    %cap_ind(I)=cap(I)/n_set(I);
+    in(I)=sum(inp((n_pre(I)+1):n_pre(I+1)))*aa_set(I)/rt;
+    p_group(I)=sum(ns((n_pre(I)+1):n_pre(I+1)))/sum(nre((n_pre(I)+1):n_pre(I+1)));
+end
+
+
+out_sum=sum(out);
+in_sum=sum(in);
+%cap_sum=sum(cap);
+p=sum(ns)/sum(nre);
+
+% for I=1:n
+%     p_ind(I)=ns(I)/nre(I);
+%     rou(I)=nne(I)/rt;
+%     mql(I)=mql(I)/rt/aa;
+%     %ps(I)=nci(I)/(nci(I)+nre0(I));
+% end
