@@ -1,0 +1,38 @@
+function[pL_re,pW_re]=pA_LTE_WiFi_win(WL,WW,n,kL,kW)
+%n : number of WiFi nodes
+%w_set(1): LTE w_set(2): WiFi
+    
+    px=zeros(10000,1);
+    y=zeros(10000,1);
+    for J=1:10000
+        px(J)=J/10000;
+        pL=px(J); 
+        
+        temp1=0;
+        for i=0:(kL-1)
+            temp1=temp1+pL*(1-pL)^i*WL*2^i;
+        end
+        temp1=temp1+(1-pL)^kL*WL*2^kL;
+        
+        pW=pL*(1-2/(1+temp1));
+        
+        temp2=0;
+        for i=0:(kW-1)
+            temp2=temp2+pW*(1-pW)^i*WW*2^i;
+        end
+        temp2=temp2+(1-pW)^kW*WW*2^kW;
+        
+        y(J)=abs(pL-exp(-2*n/(1+temp2)));
+        re(J)=(pL-exp(-2*n/(1+temp2)));
+        
+    end
+    
+    [y1 y2]=min(y);
+    pL_re=px(y2);
+    
+        temp=0;
+        for i=0:(kL-1)
+            temp=temp+pL_re*(1-pL_re)^i*WL*2^i;
+        end
+        temp=temp+(1-pL_re)^kL*WL*2^kL;   
+        pW_re=pL_re*(1-2/(1+temp));
