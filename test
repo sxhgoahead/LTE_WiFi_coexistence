@@ -1,0 +1,73 @@
+%analysis
+       clear
+        aa_set=[100 120];
+        aaL=aa_set(1);
+        aaW=aa_set(2);
+        x0=10;
+      
+        kL=0;
+        kW=6;
+        n=20;        
+        n_set=[1 20];
+        n_wifi=n_set(2);
+               
+        WL_set=8:1024;
+        
+        WW=32;
+        
+for M=1:length(WL_set)
+    
+    WL=WL_set(M);
+    
+    [pL(M),pW(M)]=pA_LTE_WiFi_win(WL,WW,n,kL,kW);
+    
+    alfa(M)=1/(1+x0-(x0-aaL)*pL(M)-aaL*pW(M)-(aaW-x0)*pW(M)*log(pL(M)));
+        
+    thW(M)=-aaW*pW(M)*log(pL(M))*alfa(M);   
+    
+    thL(M)=aaL*(pL(M)-pW(M))*alfa(M);
+    
+    th(M)=thW(M)+thL(M);
+    
+end
+
+hold on
+plot(WL_set,thL,'k--',WL_set,thW,'k--')
+
+%simulation
+        aa_set=[100 120]; 
+        aaL=aa_set(1);
+        aaW=aa_set(2);
+        x0=10;
+      
+        kL=0;
+        kW=6;
+        n=20;        
+        n_set=[1 20];     
+        runt=10000000;%%%tunable
+        theta_set=[20 20];
+        q=0.5;
+        WW=32;
+        WL_set=[8 16 32 64 128 256 512 1024];
+
+for M=1:length(WL_set)
+    
+    WL=WL_set(M);         
+      W_exp=[WL WW*ones(1,n)];
+      K_exp=[kL kW*ones(1,n)];
+        
+        [p_group,out,out_sum]=LTE_WiFi_coexistence(n_set,W_exp,q,runt,theta_set,K_exp,aa_set,x0);
+
+          p_LTE_sim(M)=p_group(1);
+          p_WiFi_sim(M)=p_group(2);
+          
+          out_LTE_sim(M)=out(1);
+          out_WiFi_sim(M)=out(2);
+    
+end
+
+hold on
+plot(WL_set,out_LTE_sim,'ks',WL_set,out_WiFi_sim,'ks')
+
+xlim([8 1024])
+xticks([8 16 32 64 128 256 512 1024])
