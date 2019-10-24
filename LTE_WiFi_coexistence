@@ -197,32 +197,13 @@ for rt=1:runt
             end
             
         end
-    end
+    end 
     
-           
-%     if mod(rt,10000)==0
-%         TT(Index)=rt*9*10^(-6);
-%         p_node1_sim(Index)=ns(1)/nre(1);
-%         p_node2_sim(Index)=ns(1+n_set(1))/nre(1+n_set(1));
-%         Index=Index+1;
-%     end
-
-     
 end
 
 
-%acdelay=acdelay/(outp*aa)
-%acdelay=acdelay/outp
-%acdelay_sec=acdelay_sec/outp
-
-
 for I=1:g
-    %p(I)=sum(ns((n_pre(I)+1):n_pre(I+1)))/sum(nre((n_pre(I)+1):n_pre(I+1)));
     out(I)=sum(outp((n_pre(I)+1):n_pre(I+1)))*aa_set(I)/rt;
-    %out_ind(I)=out(I)/n_set(I);
-    %cap(I)=out(I)*r_set(I);
-    %cap(I)=out(I)*PL/aa_set(I);
-    %cap_ind(I)=cap(I)/n_set(I);
     in(I)=sum(inp((n_pre(I)+1):n_pre(I+1)))*aa_set(I)/rt;
     p_group(I)=sum(ns((n_pre(I)+1):n_pre(I+1)))/sum(nre((n_pre(I)+1):n_pre(I+1)));
 end
@@ -233,9 +214,3 @@ in_sum=sum(in);
 %cap_sum=sum(cap);
 p=sum(ns)/sum(nre);
 
-% for I=1:n
-%     p_ind(I)=ns(I)/nre(I);
-%     rou(I)=nne(I)/rt;
-%     mql(I)=mql(I)/rt/aa;
-%     %ps(I)=nci(I)/(nci(I)+nre0(I));
-% end
